@@ -36,6 +36,12 @@ out/
 ### VS Code ###
 .vscode/
 
-*.env
-application-*.yml
-.DS_Store
+### .gitignore 생성 ###
+/.idea/
+/.gradle/
+/out/
+*.yml
+/build/
+application.yml
+application-prod.yml
+.env
