@@ -104,7 +104,8 @@ public class JwtProvider {
 
     // JWT Token에서 User Id를 추출하는 함수
     public Long getUserId(String token){
-        return parseClaims(token).get("id", Long.class);
+        String sub = parseClaims(token).getSubject();
+        return  Long.parseLong(sub);
     }
 
     // JWT Token에서 Token 전용 Id(jti)를 추출하는 함수

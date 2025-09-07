@@ -1,6 +1,5 @@
-package com.hackathon.backend.domain.User.Dto.Response;
+package com.hackathon.backend.domain.Auth.Dto.Response;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -21,4 +20,5 @@ public class JoinResponseDto {
     @NotBlank
     private final String email;
 
+    private final String profileImageUrl;
 }
