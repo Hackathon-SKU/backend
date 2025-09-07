@@ -294,7 +294,7 @@ public class AuthService {
                         .httpOnly(true) // 해당 쿠키에 JS(문서, 콘솔)의 document.cookie 식의 접근을 차단함 -> XSS 방어에 핵심임 (악의적인 스크립트가 쿠키 정보를 탈취하는 것을 막음)
                         .path("/") // 어떤 경로의 요청에 쿠키가 담길지 범위를 지정함 (전 사이트 경로에서 전송. 보안 강화하려면 /auth 등의 url로 좁힐 수 있음)
                         .secure(false) // 로컬은 HTTP이므로 false 지정. HTTPS(운영)일 때는 true로 설정한다
-                        .sameSite("Lax") //
+                        .sameSite("None") //
                         .maxAge(Duration.ofSeconds(expireSeconds)); // 쿠키 유효시간 설정(refresh Token의 TTL와 동기화함. Duration.ZERO를 주면 즉시 만료(삭제) 쿠키로 사용 가능함)
         // ㄴ> Duration.ofSeconds() : 인자로 들어온 초만큼의 Duration 객체를 생성함
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.build().toString()); // cookiebuilder 객체를 build해서 String으로 바꾼 뒤, response의 헤더로 등록시킨다.

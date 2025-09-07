@@ -4,6 +4,8 @@ import com.hackathon.backend.global.Exception.UserAccessDeniedHandler;
 import com.hackathon.backend.global.Exception.UserAuthenticationEntryPoint;
 import com.hackathon.backend.global.security.JwtAuthFilter;
 import lombok.AllArgsConstructor;
+import org.springframework.web.filter.CorsFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,6 +20,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity // Spring Security의 웹 보안 기능을 활성화하는 어노테이션
@@ -36,6 +43,9 @@ public class SecurityConfig {
 
     // 인증 없이 접근 가능한 화이트 리스트 URL 모음 String 배열 (로그인, 회원가입, 스웨거 등)
     private static final String[] AUTH_WHITELIST = {
+            "/index.html",
+            "/favicon.ico",
+            "/assets/**", "/css/**", "/js/**", "/images/**",
             "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html"
     };
 
@@ -86,6 +96,7 @@ public class SecurityConfig {
         // 2) 나머지 모든 경로는 @PreAuthorize 등의 메서드 수준 보안을 사용하여 접근을 제어함
         http.authorizeHttpRequests(authorize -> {
             authorize
+                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(AUTH_WHITELIST).permitAll()
                     .anyRequest().permitAll();
         });
@@ -112,4 +123,60 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+
+
+
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
+        CorsFilter corsFilter = new CorsFilter(corsConfigurationSource());
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(corsFilter);
+        bean.setOrder(0); // ✅ 최우선 실행 (Security 필터보다 앞)
+        return bean;
+    }
+
+
+
+    // 👇 여기서 CORS 허용 도메인/메서드/헤더를 설정
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration c = new CorsConfiguration();
+
+        // ⚠️ allowCredentials=true와 함께 * 는 불가 → "정확한 오리진" 또는 패턴 사용
+        // trycloudflare 주소가 매번 바뀌면 '패턴'을 쓰세요.
+        c.setAllowedOriginPatterns(List.of(
+                "https://*.trycloudflare.com",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://[::1]:5173",         // 일부 환경에서 로컬 IPv6
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://[::1]:3000",
+                // (같은 Wi-Fi에서 휴대폰/다른PC로 접속한다면 아래처럼 사설IP도)
+                "http://192.168.0.0:5173",
+                "http://192.168.0.0:3000",
+                // ↑ 예시는 placeholder, 실제 너의 내부 IP 대역/주소로 추가
+                "https://*.ngrok.io",
+                "https://*.ngrok-free.app"
+        ));
+
+
+        c.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        c.setAllowedHeaders(List.of("*"));
+
+        // 🍪 쿠키 주고받기 허용
+        c.setAllowCredentials(true);
+
+        // 프론트가 Authorization 헤더 쓰면 노출할 헤더 선언(선택)
+        c.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource s = new UrlBasedCorsConfigurationSource();
+        s.registerCorsConfiguration("/**", c);
+        return s;
+    }
+
+    // (선택) 프록시/터널 뒤에서 https 스킴 감지 보정
+    @Bean
+    public org.springframework.web.filter.ForwardedHeaderFilter forwardedHeaderFilter() {
+        return new org.springframework.web.filter.ForwardedHeaderFilter();
+    }
 }
