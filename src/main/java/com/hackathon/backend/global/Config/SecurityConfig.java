@@ -36,7 +36,7 @@ public class SecurityConfig {
 
     // 인증 없이 접근 가능한 화이트 리스트 URL 모음 String 배열 (로그인, 회원가입, 스웨거 등)
     private static final String[] AUTH_WHITELIST = {
-            "/user/login", "/user/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html"
+            "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html"
     };
 
     // 각 Request마다 해당 filterChain에 등록된 필터들이 순서대로 실행된다.

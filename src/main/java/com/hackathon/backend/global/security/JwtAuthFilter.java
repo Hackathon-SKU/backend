@@ -64,7 +64,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Long userId = jwtProvider.getUserId(token);
 
                 // 사용자와 토큰이 일치할 시, email로 userDetails 객체 생성
-                UserDetails userDetails = customUserDetailsService.loadUserByUsername(String.valueOf(userId));
+                UserDetails userDetails = customUserDetailsService.loadUserByUserId(userId);
 
                 // 성공적으로 userDetails를 만들었다면, 접근 권한 인증용 Token을 생성한다.
                 // UsernamePasswordAuthenticationToken은 Authentication 구현체이다.

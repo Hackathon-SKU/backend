@@ -1,4 +1,4 @@
-package com.hackathon.backend.domain.User.Dto.Request;
+package com.hackathon.backend.domain.Auth.Dto.Request;
 
 
 import com.hackathon.backend.global.Jwt.RoleType;
@@ -26,5 +26,5 @@ public class JoinRequestDto {
     @NotNull(message = "비밀번호는 필수 입력 값입니다.")
     private String password;
 
-    private RoleType role;
+    private String profileImageUrl;
 }
