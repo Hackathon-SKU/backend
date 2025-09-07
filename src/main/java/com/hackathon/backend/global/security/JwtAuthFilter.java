@@ -32,6 +32,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(final HttpServletRequest request,
                                     final HttpServletResponse response,
                                     final FilterChain filterChain) throws ServletException, IOException {
+
+        // ✅ 프리플라이트는 바로 통과
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 1. HTTP 요청 헤더에서 Authorization 헤더 값을 추출한다
         // Authorization에는 인증된 사용자의 정보가 담겨있다.
         // tokenType : 토큰 타입 지정 - 클라이언트가 인증 헤더를 보낼 때 어떤 scheme를 쓸지 알려주는 값
