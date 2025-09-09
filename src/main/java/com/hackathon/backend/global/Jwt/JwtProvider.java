@@ -1,6 +1,8 @@
 package com.hackathon.backend.global.Jwt;
 // JWT를 생성하고 검증하는 기능을 하는 클래스
 
+import com.hackathon.backend.domain.Auth.Exception.AuthErrorCode;
+import com.hackathon.backend.global.Exception.CustomException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -53,13 +55,14 @@ public class JwtProvider {
         return createToken(userId, expireTime);
     }
 
-
-    // JWT를 생성하는 내부 함수
-    // JWT 생성 과정
-    // 1. 클레임(Claims) 생성 & 채우기 -> 토큰 본문(Payload) 데이터
-    // 2. 발급/만료 시간 세팅 -> 표즌 등록 클레임 (iat, exp)
-    // 3. 서명(HS256 + 시크릿 키)
-    // 4. 직렬화 -> header.payload.signature 문자열로 반환
+    /*
+     JWT를 생성하는 내부 함수
+     - JWT 생성 과정
+         1. 클레임(Claims) 생성 & 채우기 -> 토큰 본문(Payload) 데이터
+         2. 발급/만료 시간 세팅 -> 표즌 등록 클레임 (iat, exp)
+         3. 서명(HS256 + 시크릿 키)
+         4. 직렬화 -> header.payload.signature 문자열로 반환
+     */
     private String createToken(long userId, long expireTime){
         Date now = new Date(); // 현재 시간 준비. 발급시각(iat), 만료시각(exp) 계산의 기준점이 필요하기 때문임
         return Jwts.builder()
@@ -81,9 +84,20 @@ public class JwtProvider {
     // JWT 검증하는 함수
     // JWT는 Filter 과정에서 예외 처리를 끝낸다. 전역 예외 처리로 처리하지 않는다.
     public boolean validateToken(String token) {
-        parseClaims(token); // parseClaims() 함수를 실행하다가 성공하면 현재 함수에서 true가 return되며, 에러가 난다면 중간에 에러가 return될 것이다.
-        return true;
-        // ㄴ> 향후, 나경이 코드 보고 예외처리 추가하기
+        try{
+            parseClaims(token); // parseClaims() 함수를 실행하다가 성공하면 현재 함수에서 true가 return되며, 에러가 난다면 중간에 에러가 return될 것이다.
+            return true;
+        } catch (ExpiredJwtException e){ // 토큰이 만료된 경우
+            throw new CustomException(AuthErrorCode.ACCESS_TOKEN_EXPIRED);
+        } catch (UnsupportedJwtException e){ // 지원하지 않는 형식의 JWT 인 경우
+            throw new CustomException(AuthErrorCode.UNSUPPORTED_TOKEN);
+        } catch (MalformedJwtException e){ // 잘못된 구조의 JWT
+            throw new CustomException(AuthErrorCode.MALFORMED_JWT);
+        } catch (io.jsonwebtoken.SignatureException e){ // 서명이 유효하지 않은 경우
+            throw new CustomException(AuthErrorCode.INVALID_SIGNATURE);
+        } catch (IllegalArgumentException e){ // 널값 / 비어있는 문자열 등, 잘못된 입력 인자가 들어온 경우
+            throw new CustomException(AuthErrorCode.WRONG_STYLE_INPUT);
+        }
     }
 
 

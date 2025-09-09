@@ -1,5 +1,6 @@
 package com.hackathon.backend.global.security;
 
+import com.hackathon.backend.global.Exception.CustomException;
 import com.hackathon.backend.global.Jwt.JwtProvider;
 import com.hackathon.backend.infra.Redis.RedisUtil;
 import jakarta.servlet.FilterChain;
@@ -8,23 +9,40 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
 
 @Slf4j
-@RequiredArgsConstructor
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
     // 사용자 username(email)로 UserDetails 객체를 가져오기 위해 사용하는 UserDetailsService
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtProvider jwtProvider; // jwt 인증 등의 작업을 하기 위한 jwtUtil 객체
     private final RedisUtil redisUtil;
+    private final @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver; // 필터에서 발생한 예외를 전역 예외처리기로 넘기기 위한 객체
+        // ㄴ> HandlerExceptionResolver : MVC 처리 중 발생한 예외를 가로채어, 적절한 응답을 만들 책임이 있는 예외 해석기
+
+    // Lombok은 @Qualifier를 생성자에 복사해주지 않는다. 따라서 아래처럼 직접 생성자를 명시해준다.
+    public JwtAuthFilter(
+            CustomUserDetailsService customUserDetailsService,
+            JwtProvider jwtProvider,
+            RedisUtil redisUtil,
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver // 👈 여기!
+    ) {
+        this.customUserDetailsService = customUserDetailsService;
+        this.jwtProvider = jwtProvider;
+        this.redisUtil = redisUtil;
+        this.resolver = resolver;
+    }
+
 
     // JWT 검증 필터 수행
     // JwtAuthFilter 자체적으로 사용자를 검증한다
@@ -57,40 +75,50 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             // "Bearer " 부분은 인증 스키마이기 때문에, 해당 부분을 자르고 순수한 JWT 문자열을 구하기 위해 substring을 하는 것
 
             // 3. JWT 유효성 검증
-            if(jwtProvider.validateToken(token)){  // access token에서 Jws<Claims> 객체로부터 Claims를 가져옴으로써 유효성을 검증하는 함수
-                // 4. JWT 토큰의 유효성이 검증되었다면, 해당 JWT access 토큰의 jti(jwt id)가 Redis의 블랙리스트에 있는지 확인한다.
-                // jwtProvider를 이용하여 해당 토큰의 jti를 얻어온 뒤, 해당 jti로 redis에 있는 블랙리스트로 등록되어있는지 여부를 확인한다.
-                String jtiKey = RedisUtil.BLACKLIST_TOKEN_PREFIX + jwtProvider.getTokenId(token);
-                if(redisUtil.isBlacklisted(jtiKey)){
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access Token is blacklisted");
-                    // 해당 토큰이 블랙리스트인 경우, response로 Error를 전송한다.
-                    return;
+            try{
+                if(jwtProvider.validateToken(token)){  // access token에서 Jws<Claims> 객체로부터 Claims를 가져옴으로써 유효성을 검증하는 함수
+                    // 4. JWT 토큰의 유효성이 검증되었다면, 해당 JWT access 토큰의 jti(jwt id)가 Redis의 블랙리스트에 있는지 확인한다.
+                    // jwtProvider를 이용하여 해당 토큰의 jti를 얻어온 뒤, 해당 jti로 redis에 있는 블랙리스트로 등록되어있는지 여부를 확인한다.
+                    String jtiKey = RedisUtil.BLACKLIST_TOKEN_PREFIX + jwtProvider.getTokenId(token);
+                    if(redisUtil.isBlacklisted(jtiKey)){
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access Token is blacklisted");
+                        // 해당 토큰이 블랙리스트인 경우, response로 Error를 전송한다.
+                        return;
+                    }
+
+                    // access token이 정상적인 토큰이라면, 해당 토큰의 Claims 객체에서 사용자 아이디를 가져온다
+                    Long userId = jwtProvider.getUserId(token);
+
+                    // 사용자와 토큰이 일치할 시, email로 userDetails 객체 생성
+                    UserDetails userDetails = customUserDetailsService.loadUserByUserId(userId);
+
+                    // 성공적으로 userDetails를 만들었다면, 접근 권한 인증용 Token을 생성한다.
+                    // UsernamePasswordAuthenticationToken은 Authentication 구현체이다.
+                    // 생성된 Authentication 객체를 SecurityContextManger를 사용하여 SecurityContext에 인증 정보를 저장하는 것이다.
+                    if(userDetails != null){
+                        // UserDetails, Password, Role을 이용하여 "접근 권한 인증 Token (Authentication 객체)" 생성
+                        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        // ㄴ> 인자 1 : Object principal => 로그인한 사용자 객체(보통 UserDetails 타입)
+                        // => SecurityContextHolder.getContext().getAuthentication().getPrincipal() 로 꺼낼 수 있음
+                        // ㄴ> 인자 2 : credentials => 사용자가 제출한 자격 증명 (보통 password)
+                        // => 로그인 시도 단계에서는 실제 비밀번호가 들어간다. 하지만, 현재 JWT는 이미 인증된 상태라서 비번을 들 필요가 없으므로 null처리
+                        // ㄴ> 인자 3 : authorities => 사용자가 가진 권한(role) 목록
+                        // => userDetails.getAuthorities()로 권한 목록 가져옴
+
+                        // 현재 Request의 Security Context에 접근 권한 설정함
+                        SecurityContextHolder.getContext()
+                                .setAuthentication(authenticationToken);
+                    }
                 }
-
-                // access token이 정상적인 토큰이라면, 해당 토큰의 Claims 객체에서 사용자 아이디를 가져온다
-                Long userId = jwtProvider.getUserId(token);
-
-                // 사용자와 토큰이 일치할 시, email로 userDetails 객체 생성
-                UserDetails userDetails = customUserDetailsService.loadUserByUserId(userId);
-
-                // 성공적으로 userDetails를 만들었다면, 접근 권한 인증용 Token을 생성한다.
-                // UsernamePasswordAuthenticationToken은 Authentication 구현체이다.
-                // 생성된 Authentication 객체를 SecurityContextManger를 사용하여 SecurityContext에 인증 정보를 저장하는 것이다.
-                if(userDetails != null){
-                    // UserDetails, Password, Role을 이용하여 "접근 권한 인증 Token (Authentication 객체)" 생성
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    // ㄴ> 인자 1 : Object principal => 로그인한 사용자 객체(보통 UserDetails 타입)
-                    // => SecurityContextHolder.getContext().getAuthentication().getPrincipal() 로 꺼낼 수 있음
-                    // ㄴ> 인자 2 : credentials => 사용자가 제출한 자격 증명 (보통 password)
-                    // => 로그인 시도 단계에서는 실제 비밀번호가 들어간다. 하지만, 현재 JWT는 이미 인증된 상태라서 비번을 들 필요가 없으므로 null처리
-                    // ㄴ> 인자 3 : authorities => 사용자가 가진 권한(role) 목록
-                    // => userDetails.getAuthorities()로 권한 목록 가져옴
-
-                    // 현재 Request의 Security Context에 접근 권한 설정함
-                    SecurityContextHolder.getContext()
-                            .setAuthentication(authenticationToken);
-                }
+            } catch (CustomException e){
+                resolver.resolveException(request, response, null, e); // RestControllerAdvice로 해당 에러 위임
+                    // ㄴ> request, response 인자로 넘겨줌
+                    // 3번째 인자 : Object handler => 예외를 발생시킨 핸들러 (컨트롤러 메서드)
+                        // 같은 컨트롤러에 선언된 @ExceptionHandler를 우선 적용할 때 컨텍스트 단서로 활용됨
+                        // 필터에서 수동 호출 시, 보통 null을 넣는다.
+                    // 4번째 인자 : Exception ex 객체
             }
+
         }
 
         // filterChain의 doFilter() 함수로 다음 필터로 request와 response를 넘긴다
