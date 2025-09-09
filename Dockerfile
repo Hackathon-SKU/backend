@@ -1,3 +1,6 @@
+# --- Dockerfile : 이미지를 만드는 레시피 (설정값 파일) ---#
+
+
 # --- Build stage (Debian 기반) ---
 FROM gradle:8.8-jdk17 AS builder
 WORKDIR /workspace

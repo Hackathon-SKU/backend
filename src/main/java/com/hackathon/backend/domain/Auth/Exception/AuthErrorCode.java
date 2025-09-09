@@ -22,7 +22,9 @@ public enum AuthErrorCode implements BaseErrorCode {
     ACCESS_TOKEN_EXPIRED("JWT_401_004", "액세스 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED),
     REFRESH_TOKEN_EXPIRED("JWT_401_005", "리프레시 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED),
     UNSUPPORTED_TOKEN("JWT_401_006", "지원되지 않는 JWT 형식입니다.",  HttpStatus.UNAUTHORIZED),
-    INVALID_SIGNATURE("JWT_401_007", "JWT 서명이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED)
+    INVALID_SIGNATURE("JWT_401_007", "JWT 서명이 유효하지 않습니다.", HttpStatus.UNAUTHORIZED),
+    MALFORMED_JWT("JWT_401_008", "잘못된 구조의 JWT입니다.", HttpStatus.UNAUTHORIZED),
+    WRONG_STYLE_INPUT("JWT_401_009", "잘못된 입력 인자가 들어왔습니다.", HttpStatus.UNAUTHORIZED)
     ;
 
     private final String code;

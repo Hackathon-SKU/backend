@@ -63,3 +63,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// 파라미터 이름 메타데이터를 켜두면 주입 판단이 더 안정적임
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-parameters']
+}
