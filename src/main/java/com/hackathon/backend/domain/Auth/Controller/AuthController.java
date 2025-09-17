@@ -30,6 +30,8 @@ import static com.hackathon.backend.global.Response.GlobalWebResponse.success;
 public class AuthController {
     private final AuthService authService;
 
+
+
     @Operation(
             summary = "회원가입", // Swagger UI에 제목처럼 보임
             description =

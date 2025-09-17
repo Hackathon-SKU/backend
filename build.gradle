@@ -9,7 +9,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -67,4 +67,8 @@ tasks.named('test') {
 // 파라미터 이름 메타데이터를 켜두면 주입 판단이 더 안정적임
 tasks.withType(JavaCompile).configureEach {
 	options.compilerArgs += ['-parameters']
+}
+
+bootJar{
+	archiveFileName = '2024-msg-server.jar'
 }
