@@ -14,7 +14,7 @@ public enum AuthErrorCode implements BaseErrorCode {
     AUTHENTICATION_NOT_FOUND("AUTH_401_004", "로그인이 필요합니다.", HttpStatus.UNAUTHORIZED),
     INVALID_PASSWORD("AUTH_401_005", "비밀번호가 일치하지 않습니다.", HttpStatus.UNAUTHORIZED),
     INVALID_JOIN("AUTH_401_006", "회원정보를 전부 입력해야합니다.", HttpStatus.UNAUTHORIZED),
-
+    USER_ALREADY_EXIST("AUTH_401_006", "이미 존재하는 이메일입니다!", HttpStatus.EXPECTATION_FAILED),
 
     TOKEN_FAIL("JWT_401_001", "액세스 토큰 요청을 실패했습니다.", HttpStatus.UNAUTHORIZED),
     INVALID_ACCESS_TOKEN("JWT_401_002", "유효하지 않은 액세스 토큰입니다.", HttpStatus.UNAUTHORIZED),

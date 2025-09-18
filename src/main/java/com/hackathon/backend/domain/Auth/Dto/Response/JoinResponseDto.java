@@ -20,5 +20,8 @@ public class JoinResponseDto {
     @NotBlank
     private final String email;
 
+    @NotBlank
+    private final Integer point;
+
     private final String profileImageUrl;
 }

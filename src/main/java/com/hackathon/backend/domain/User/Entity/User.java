@@ -27,8 +27,9 @@ public class User {
     @Column(name="email", length = 50)
     private String email;
 
-    @Column(name = "point", nullable = false)
-    private Integer point;
+    @Column(name = "point")
+    @Builder.Default // Builder에서 초기값을 반영하려면, 해당 어노테이션을 적용해야한다.
+    private Integer point=0;
 
     @Enumerated(EnumType.STRING) // Enum 이름 그대로가 DB에 저장되므로, RoleType에서 굳이 따로 변수를 지정해주지 않아도 된다.
     @Column(name = "role", nullable = false)
@@ -37,6 +38,7 @@ public class User {
     @Column(name = "profile_image", nullable = true)
     private String profileImageUrl;
 
+    // Dto -> user
     public static User from(JoinRequestDto dto){
         return User.builder()
                 .name(dto.getName())
