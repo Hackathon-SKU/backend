@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +45,7 @@ public class AuthService {
     public JoinResponseDto join(JoinRequestDto joinRequestDto, HttpServletResponse response) {
         // 1. 회원가입하려는 회원 이메일로 중복확인
         if(userRepository.existsByEmail(joinRequestDto.getEmail())) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다!");
+            throw new CustomException(AuthErrorCode.USER_ALREADY_EXIST);
         }
 
         // 2. 중복이 안된 이메일이라면, 해당 User Entity 객체를 생성해서 repository로 save한다,
@@ -52,6 +53,10 @@ public class AuthService {
         // PasswordEncoder로 비밀번호 인코딩
         user.setPassword(passwordEncoder.encode(joinRequestDto.getPassword())); // user 객체에 인코딩된 비밀번호 저장
         User savedUser = userRepository.save(user); // save 성공 시, 인자로 넣은 객체와 동일한 데이터를 갖고 있는 객체를 다시 반환함
+
+        if(savedUser == null){
+            throw new CustomException(AuthErrorCode.USER_INFO_FAIL);
+        }
 
         // 3. 자동 로그인 처리
         LoginRequestDto loginDto = new LoginRequestDto(
@@ -67,6 +72,7 @@ public class AuthService {
                 .id(savedUser.getId())
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
+                .point(savedUser.getPoint())
                 .profileImageUrl(savedUser.getProfileImageUrl())
                 .build();
     }
@@ -82,12 +88,17 @@ public class AuthService {
         CustomUserDetails principal = validateUser(loginRequestDto); // 사용자 인증 후, 해당 authentication의 principal 받아오기
         issueTokensAndSetResponse(principal, response); // redis에 해당 사용자의 refreshToken을 저장한다.
 
+        Long userId = principal.getUser().getUserId();
+        Optional<User> op = userRepository.findById(userId);
+        User user = op.get();
+
         // 사용자 정보를 LoginResponseDto에 담아서 return
         return LoginResponseDto.builder()
-                .id(principal.getUser().getUserId())
-                .name(principal.getUser().getName())
-                .email(principal.getUser().getEmail())
-                .profileImageUrl(principal.getUser().getProfileImageUrl())
+                .id(userId)
+                .name(user.getName())
+                .email(user.getEmail())
+                .point(user.getPoint())
+                .profileImageUrl(user.getProfileImageUrl())
                 .build();
     }
 
