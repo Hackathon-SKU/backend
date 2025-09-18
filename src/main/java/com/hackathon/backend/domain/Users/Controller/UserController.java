@@ -61,6 +61,7 @@ public class UserController {
                         - 사용자 id(DB PK)
                         - 사용자 이름
                         - 사용자 이메일
+                        - 사용자 포인트
                         - 사용자 프로필 이미지 url
                         을 반환해줍니다.
                     """
