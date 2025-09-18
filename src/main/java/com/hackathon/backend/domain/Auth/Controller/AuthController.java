@@ -48,7 +48,7 @@ public class AuthController {
         JoinResponseDto joinResponseDto = authService.join(joinRequestDto, response);
 
         // 만약 RESTful API 규약을 엄격하게 지킨다면, Location 헤더를 사용해서 HTTP 표준인 "201 Created" 응답의 관례를 지키면 된다.
-        GlobalWebResponse<JoinResponseDto> dto = success("회원가입 성공", joinResponseDto);
+        GlobalWebResponse<JoinResponseDto> dto = GlobalWebResponse.success("회원가입 성공", joinResponseDto);
         return ResponseEntity.ok(dto);
     }
 

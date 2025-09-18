@@ -15,23 +15,26 @@ import lombok.*;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // DB의 AUTO_INCREMENT와 같은 방식
-    @Column(name="user_id", nullable=false)
+    @Column(name="id", nullable=false)
     private Long id;
 
-    @Column(name="user_name", nullable=false)
+    @Column(name="name", nullable=false)
     private String name;
 
-    @Column(name="user_password", nullable=false)
+    @Column(name="password", nullable=false)
     private String password;
 
-    @Column(name="user_email", length = 50, updatable = false)
+    @Column(name="email", length = 50)
     private String email;
 
+    @Column(name = "point", nullable = false)
+    private Integer point;
+
     @Enumerated(EnumType.STRING) // Enum 이름 그대로가 DB에 저장되므로, RoleType에서 굳이 따로 변수를 지정해주지 않아도 된다.
-    @Column(name = "user_role", nullable = false)
+    @Column(name = "role", nullable = false)
     private RoleType role;
 
-    @Column(name = "user_profile_image", nullable = true)
+    @Column(name = "profile_image", nullable = true)
     private String profileImageUrl;
 
     public static User from(JoinRequestDto dto){
