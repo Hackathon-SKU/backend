@@ -2,6 +2,8 @@ package com.hackathon.backend.domain.Profiles.Service;
 
 import com.hackathon.backend.domain.Profiles.Dto.Request.CaregiverProfileUpdateRequest;
 import com.hackathon.backend.domain.Profiles.Dto.Request.DisabledProfileUpdateRequest;
+import com.hackathon.backend.domain.Profiles.Dto.Response.CaregiverInfoResponse;
+import com.hackathon.backend.domain.Profiles.Dto.Response.DisabledInfoResponse;
 import com.hackathon.backend.domain.Profiles.Dto.Response.ProfileResponse;
 import com.hackathon.backend.domain.Profiles.Entity.CaregiverProfile;
 import com.hackathon.backend.domain.Profiles.Entity.DisabledProfile;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.AccessDeniedException;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -70,18 +74,40 @@ public class ProfileService {
         return builder.build();
     }
 
-    /** 🧑‍⚕️ Caregiver 프로필 조회(본인) → 합본 반환 */
     @Transactional
-    public ProfileResponse getMyCaregiverProfile(CustomUserDetails principal) {
+    public CaregiverInfoResponse getMyCaregiverProfile(CustomUserDetails principal) {
         Users user = loadCurrentUser(principal);
         if (user.getRole() != RoleType.CAREGIVER)
             throw new CustomException(ProfileErroCode.INVALID_ROLE);
-        return getMyProfile(principal); // ✅ 합본으로 반환
+
+        CaregiverProfile p = caregiverRepo.findById(user.getId()).orElse(null);
+
+        // ✅ 기본값(빈 구조) 제공해서 null 숨김 방지
+        Short careerYears = (p != null && p.getCareerYears() != null) ? p.getCareerYears() : 0;
+        Map<String, Object> serviceCategories = (p != null && p.getServiceCategories() != null)
+                ? p.getServiceCategories()
+                : Map.of("categories", List.of()); // [] 기본
+        Map<String, Object> regions = (p != null && p.getRegions() != null)
+                ? p.getRegions()
+                : Map.of("address", List.of());    // [] 기본
+        String intro = (p != null && p.getIntro() != null) ? p.getIntro() : "";
+
+        return CaregiverInfoResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .gender(user.getGender().name())
+                .birthDate(user.getBirthDate())
+                .role(user.getRole())
+                .profileImgUrl(user.getProfileImgUrl())
+                .careerYears(careerYears)
+                .serviceCategories(serviceCategories)
+                .regions(regions)
+                .intro(intro)
+                .build();
     }
 
-    /** 🧑‍⚕️ Caregiver 프로필 수정(PATCH) → 합본 반환 */
     @Transactional
-    public ProfileResponse patchMyCaregiverProfile(
+    public CaregiverInfoResponse patchMyCaregiverProfile(
             CustomUserDetails principal,
             CaregiverProfileUpdateRequest req) {
 
@@ -92,31 +118,67 @@ public class ProfileService {
         CaregiverProfile p = caregiverRepo.findById(user.getId()).orElse(null);
         if (p == null) {
             p = CaregiverProfile.builder().build();
-            p.linkUser(user); // @MapsId + 양방향 연결
+            p.linkUser(user); // @MapsId
         }
 
-        if (req.getCareerYears() != null) p.setCareerYears(req.getCareerYears());
+        if (req.getCareerYears() != null) {
+            int years = req.getCareerYears();
+            if (years < 0 || years > 255) {
+                // ⚠️ 400 보내고 싶으면 에러코드 추가 (예: INVALID_CAREER_YEARS)
+                throw new CustomException(ProfileErroCode.INVALID_ROLE); // 예시: 실제론 별도 코드로
+            }
+            p.setCareerYears((short) years); // ✅ 안전 변환
+        }
         if (req.getServiceCategories() != null) p.setServiceCategories(req.getServiceCategories());
         if (req.getRegions() != null) p.setRegions(req.getRegions());
         if (req.getIntro() != null) p.setIntro(req.getIntro());
 
         caregiverRepo.save(p);
 
-        return getMyProfile(principal); // ✅ 저장 후 합본 반환
+        return CaregiverInfoResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .gender(user.getGender().name())
+                .birthDate(user.getBirthDate())
+                .role(user.getRole())
+                .profileImgUrl(user.getProfileImgUrl())
+                .careerYears(p.getCareerYears())
+                .serviceCategories(p.getServiceCategories())
+                .regions(p.getRegions())
+                .intro(p.getIntro())
+                .build();
     }
 
-    /** 👩‍🦽 Disabled 프로필 조회(본인) → 합본 반환 */
+
+    /** 👩‍🦽 Disabled 프로필 조회(본인) → flat 응답 */
     @Transactional
-    public ProfileResponse getMyDisabledProfile(CustomUserDetails principal) {
+    public DisabledInfoResponse getMyDisabledProfile(CustomUserDetails principal) {
         Users user = loadCurrentUser(principal);
         if (user.getRole() != RoleType.DISABLED)
             throw new CustomException(ProfileErroCode.INVALID_ROLE);
-        return getMyProfile(principal); // ✅ 합본으로 반환
+
+        DisabledProfile p = disabledRepo.findById(user.getId()).orElse(null);
+
+        String region = (p != null && p.getRegion() != null) ? p.getRegion() : "";
+        String registrationNumber = (p != null && p.getRegistrationNumber() != null) ? p.getRegistrationNumber() : "";
+        Map<String, Object> classification = (p != null && p.getClassification() != null) ? p.getClassification() : Map.of();
+
+        return DisabledInfoResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .gender(user.getGender().name())
+                .birthDate(user.getBirthDate())
+                .role(user.getRole())
+                .profileImgUrl(user.getProfileImgUrl())
+                .region(region)
+                .registrationNumber(registrationNumber)
+                .classification(classification)
+                .build();
     }
 
-    /** 👩‍🦽 Disabled 프로필 수정(PATCH) → 합본 반환 */
+    /** 👩‍🦽 Disabled 프로필 수정(PATCH) → flat 응답 */
     @Transactional
-    public ProfileResponse patchMyDisabledProfile(
+    public DisabledInfoResponse patchMyDisabledProfile(
             CustomUserDetails principal,
             DisabledProfileUpdateRequest req) {
 
@@ -136,6 +198,16 @@ public class ProfileService {
 
         disabledRepo.save(p);
 
-        return getMyProfile(principal); // ✅ 저장 후 합본 반환
+        return DisabledInfoResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .gender(user.getGender().name())
+                .birthDate(user.getBirthDate())
+                .role(user.getRole())
+                .profileImgUrl(user.getProfileImgUrl())
+                .region(p.getRegion() != null ? p.getRegion() : "")
+                .registrationNumber(p.getRegistrationNumber() != null ? p.getRegistrationNumber() : "")
+                .classification(p.getClassification() != null ? p.getClassification() : Map.of())
+                .build();
     }
 }
