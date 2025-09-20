@@ -64,6 +64,14 @@ public class Posting {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
+
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(
+//            name = "user_id",
+//            referencedColumnName = "user_id",
+//            insertable = false, updatable = false,
+//            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT) // ★ FK 생성 막기
+//    )
     private DisabledProfile disabledProfile;
 
     // 편의 수정 메서드 등은 필요시 추가
