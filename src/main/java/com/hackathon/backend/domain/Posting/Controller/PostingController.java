@@ -48,50 +48,6 @@ public class PostingController {
                 .body(GlobalWebResponse.success("OK", "성공", detail));
     }
 
-
-    /** 공고 단건 조회 (응답은 한국어로 변환된 값) */
-    @GetMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<GlobalWebResponse<?>> get(@PathVariable Long id) {
-        PostingDetailResponse data = postingService.get(id);
-        return ResponseEntity.ok(
-                GlobalWebResponse.success("OK", "성공", data)
-        );
-    }
-
-    /** 공고 목록 조회 (페이징) */
-    @GetMapping(produces = "application/json")
-    public ResponseEntity<GlobalWebResponse<?>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,DESC") String sort // 예: "createdAt,DESC"
-    ) {
-        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
-        Page<PostingDetailResponse> resPage = postingService.list(pageable);
-
-        Map<String, Object> payload = Map.of(
-                "postings", resPage.getContent(),          // 한국어 변환된 리스트
-                "page", resPage.getNumber(),
-                "size", resPage.getSize(),
-                "totalElements", resPage.getTotalElements(),
-                "totalPages", resPage.getTotalPages(),
-                "hasNext", resPage.hasNext()
-        );
-
-        return ResponseEntity.ok(
-                GlobalWebResponse.success("OK", "성공", payload)
-        );
-    }
-
-
-    /** 공고 삭제 */
-    @DeleteMapping(value = "/{id}", produces = "application/json")
-    public ResponseEntity<GlobalWebResponse<?>> delete(@PathVariable Long id) {
-        postingService.delete(id);
-        return ResponseEntity.ok(
-                GlobalWebResponse.success("OK", "성공", Map.of("id", id))
-        );
-    }
-
     /* ===== 내부 유틸 ===== */
     private Sort parseSort(String input) {
         // "field,DESC" 또는 "field,ASC"
