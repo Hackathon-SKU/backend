@@ -1,13 +1,12 @@
-package com.hackathon.backend.domain.User.Service;
+package com.hackathon.backend.domain.Users.Service;
 
 
-import com.hackathon.backend.domain.User.Dto.Request.DeleteRequestDto;
-import com.hackathon.backend.domain.User.Dto.Response.InfoResponseDto;
-import com.hackathon.backend.domain.User.Repository.UserRepository;
+import com.hackathon.backend.domain.Users.Dto.Request.DeleteRequestDto;
+import com.hackathon.backend.domain.Users.Dto.Response.InfoResponseDto;
+import com.hackathon.backend.domain.Users.Repository.UserRepository;
 import com.hackathon.backend.global.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 

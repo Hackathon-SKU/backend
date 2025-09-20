@@ -1,10 +1,12 @@
 package com.hackathon.backend.global.security;
 
-import com.hackathon.backend.global.Jwt.RoleType;
+import com.hackathon.backend.domain.Users.Entity.RoleType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.math.BigInteger;
 
 @Getter
 @Builder

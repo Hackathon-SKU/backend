@@ -1,7 +1,7 @@
-package com.hackathon.backend.domain.User.Controller;
-import com.hackathon.backend.domain.User.Dto.Request.DeleteRequestDto;
-import com.hackathon.backend.domain.User.Dto.Response.InfoResponseDto;
-import com.hackathon.backend.domain.User.Service.UserService;
+package com.hackathon.backend.domain.Users.Controller;
+import com.hackathon.backend.domain.Users.Dto.Request.DeleteRequestDto;
+import com.hackathon.backend.domain.Users.Dto.Response.InfoResponseDto;
+import com.hackathon.backend.domain.Users.Service.UserService;
 import com.hackathon.backend.global.Response.GlobalWebResponse;
 import com.hackathon.backend.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,8 +32,6 @@ public class UserController {
 //    }
 
     private final UserService userService;
-
-
 
     @Operation(
             summary = "회원 탈퇴",

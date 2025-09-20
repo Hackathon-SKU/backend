@@ -1,5 +1,6 @@
 package com.hackathon.backend.domain.Auth.Dto.Response;
 
+import com.hackathon.backend.domain.Users.Entity.RoleType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -19,6 +20,8 @@ public class LoginResponseDto {
     @Email
     @NotBlank
     private final String email;
+
+    private final RoleType role;
 
     private final String profileImageUrl;
 }

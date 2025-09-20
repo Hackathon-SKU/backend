@@ -1,4 +1,4 @@
-package com.hackathon.backend.domain.User.Dto.Request;
+package com.hackathon.backend.domain.Users.Dto.Request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

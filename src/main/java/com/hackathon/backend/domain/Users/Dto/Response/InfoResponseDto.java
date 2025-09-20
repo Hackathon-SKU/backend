@@ -1,4 +1,4 @@
-package com.hackathon.backend.domain.User.Dto.Response;
+package com.hackathon.backend.domain.Users.Dto.Response;
 
 
 import jakarta.validation.constraints.Email;
@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import java.math.BigInteger;
 
 @Getter
 @Builder

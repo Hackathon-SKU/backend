@@ -5,8 +5,13 @@ import com.hackathon.backend.domain.Auth.Dto.Response.LoginResponseDto;
 import com.hackathon.backend.domain.Auth.Exception.AuthErrorCode;
 import com.hackathon.backend.domain.Auth.Dto.Request.JoinRequestDto;
 import com.hackathon.backend.domain.Auth.Dto.Response.JoinResponseDto;
-import com.hackathon.backend.domain.User.Entity.User;
-import com.hackathon.backend.domain.User.Repository.UserRepository;
+import com.hackathon.backend.domain.Profiles.Entity.CaregiverProfile;
+import com.hackathon.backend.domain.Profiles.Entity.DisabledProfile;
+import com.hackathon.backend.domain.Profiles.Repository.CaregiverProfileRepository;
+import com.hackathon.backend.domain.Profiles.Repository.DisabledProfileRepository;
+import com.hackathon.backend.domain.Users.Entity.RoleType;
+import com.hackathon.backend.domain.Users.Entity.Users;
+import com.hackathon.backend.domain.Users.Repository.UserRepository;
 import com.hackathon.backend.global.Exception.CustomException;
 import com.hackathon.backend.global.Jwt.JwtProvider;
 import com.hackathon.backend.global.security.CustomUserDetails;
@@ -24,8 +29,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,9 +41,11 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final AuthenticationManager authenticationManager; // 인증 처리의 진입점이다. 여러 AuthenticationProvider에게 인증을 시도함
     private final PasswordEncoder passwordEncoder;
-    private final UserRepository userRepository;
 
-    private boolean secure;
+
+    private final UserRepository userRepository;
+    private final CaregiverProfileRepository caregiverProfileRepository;
+    private final DisabledProfileRepository disabledProfileRepository;
 
 
     // 회원가입 진행 함수
@@ -44,33 +53,74 @@ public class AuthService {
     public JoinResponseDto join(JoinRequestDto joinRequestDto, HttpServletResponse response) {
         // 1. 회원가입하려는 회원 이메일로 중복확인
         if(userRepository.existsByEmail(joinRequestDto.getEmail())) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다!");
+            throw new CustomException(AuthErrorCode.EMAIL_ALREADY_EXIST);
         }
 
         // 2. 중복이 안된 이메일이라면, 해당 User Entity 객체를 생성해서 repository로 save한다,
-        User user = User.from(joinRequestDto);
+        Users users = Users.from(joinRequestDto);
         // PasswordEncoder로 비밀번호 인코딩
-        user.setPassword(passwordEncoder.encode(joinRequestDto.getPassword())); // user 객체에 인코딩된 비밀번호 저장
-        User savedUser = userRepository.save(user); // save 성공 시, 인자로 넣은 객체와 동일한 데이터를 갖고 있는 객체를 다시 반환함
+        users.setPasswordHash(passwordEncoder.encode(joinRequestDto.getPassword())); // user 객체에 인코딩된 비밀번호 저장
+        Users savedUsers = userRepository.save(users); // save 성공 시, 인자로 넣은 객체와 동일한 데이터를 갖고 있는 객체를 다시 반환함
 
-        // 3. 자동 로그인 처리
+
+        // 3) ROLE에 따라 프로필 생성 (Shared PK)
+        createProfileByRole(savedUsers);
+
+
+        // 4. 자동 로그인 처리
         LoginRequestDto loginDto = new LoginRequestDto(
-                savedUser.getEmail(),
+                savedUsers.getEmail(),
                 joinRequestDto.getPassword() // 원문 비밀번호 (엔코딩 전 값)
         );
         CustomUserDetails principal = validateUser(loginDto);     // AuthenticationManager 인증
         issueTokensAndSetResponse(principal, response);           // 액세스/리프레시 토큰 발급 및 세팅
 
-        // 4. save 성공 시 ResponseDto에 해당 객체의 데이터 담는다.
+        // 5. save 성공 시 ResponseDto에 해당 객체의 데이터 담는다.
         // Service는 비즈니스 로직에만 집중한다.
         return JoinResponseDto.builder()
-                .id(savedUser.getId())
-                .name(savedUser.getName())
-                .email(savedUser.getEmail())
-                .profileImageUrl(savedUser.getProfileImageUrl())
+                .id(savedUsers.getId())
+                .name(savedUsers.getName())
+                .email(savedUsers.getEmail())
+                .role(savedUsers.getRole())
+                .profileImageUrl(savedUsers.getProfileImgUrl())
                 .build();
     }
 
+
+    private void createProfileByRole(Users savedUsers) {
+        RoleType role = savedUsers.getRole();
+        if (role == null) return;
+
+        switch (role) {
+            case DISABLED -> { // 장애인인 경우
+                // 이미 존재하면 스킵 (중복 방지) 🛡️
+                if (disabledProfileRepository.existsById(savedUsers.getId())) return;
+
+                DisabledProfile profile = DisabledProfile.builder()
+                        .user(savedUsers) // @MapsId로 FK=PK 세팅
+                        // 필요 시 기본값 지정 가능 👇
+                        // .region(null).registrationNumber(null).classification(null)
+                        .build();
+                // 양방향 연결 편의 메서드
+                profile.linkUser(savedUsers);
+                disabledProfileRepository.save(profile);
+            }
+            case CAREGIVER -> {
+                if (caregiverProfileRepository.existsById(savedUsers.getId())) return;
+
+                CaregiverProfile profile = CaregiverProfile.builder()
+                        .user(savedUsers)
+                        // .careerYears(null).serviceCategories(null).regions(null).intro(null)
+                        .build();
+                profile.linkUser(savedUsers);
+                caregiverProfileRepository.save(profile);
+            }
+            default -> {
+                // 알 수 없는 역할 → 아무 것도 안 함 (또는 예외로 바꿔도 됨)
+            }
+        }
+    }
+    
 
     // 로그인 진행 함수 - login 시, 새로운 access token을 발급해주는 함수
     /*
@@ -82,12 +132,17 @@ public class AuthService {
         CustomUserDetails principal = validateUser(loginRequestDto); // 사용자 인증 후, 해당 authentication의 principal 받아오기
         issueTokensAndSetResponse(principal, response); // redis에 해당 사용자의 refreshToken을 저장한다.
 
+        Long userId = principal.getUser().getUserId();
+
+        Users user = userRepository.findById(userId).get();
+
         // 사용자 정보를 LoginResponseDto에 담아서 return
         return LoginResponseDto.builder()
-                .id(principal.getUser().getUserId())
-                .name(principal.getUser().getName())
-                .email(principal.getUser().getEmail())
-                .profileImageUrl(principal.getUser().getProfileImageUrl())
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .profileImageUrl(user.getProfileImgUrl())
                 .build();
     }
 

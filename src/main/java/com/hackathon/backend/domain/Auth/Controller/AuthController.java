@@ -30,8 +30,6 @@ import static com.hackathon.backend.global.Response.GlobalWebResponse.success;
 public class AuthController {
     private final AuthService authService;
 
-
-
     @Operation(
             summary = "회원가입", // Swagger UI에 제목처럼 보임
             description =
@@ -46,6 +44,8 @@ public class AuthController {
     @PostMapping("/join")
     public ResponseEntity<GlobalWebResponse<JoinResponseDto>> join(@RequestBody @Valid JoinRequestDto joinRequestDto, HttpServletResponse response){
         JoinResponseDto joinResponseDto = authService.join(joinRequestDto, response);
+
+
 
         // 만약 RESTful API 규약을 엄격하게 지킨다면, Location 헤더를 사용해서 HTTP 표준인 "201 Created" 응답의 관례를 지키면 된다.
         GlobalWebResponse<JoinResponseDto> dto = GlobalWebResponse.success("회원가입 성공", joinResponseDto);

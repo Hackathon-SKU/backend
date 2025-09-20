@@ -6,11 +6,13 @@ import com.hackathon.backend.global.Exception.CustomException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
@@ -18,7 +20,7 @@ import java.util.UUID;
 @Slf4j // lombok이 slf4j 로거 필드를 자동 생성해주는 어노테이션
 @Component
 public class JwtProvider {
-    private Key key; // SecretKey를 담고 있는 객체
+    private final SecretKey key; // SecretKey를 담고 있는 객체
     private final long accessTokenExpTime; // access 토큰 만료까지 남은 시간(초)
     private final long refreshTokenExpTime; // refresh 토큰 만료까지 남은 시간(초)
 
@@ -66,16 +68,16 @@ public class JwtProvider {
     private String createToken(long userId, long expireTime){
         Date now = new Date(); // 현재 시간 준비. 발급시각(iat), 만료시각(exp) 계산의 기준점이 필요하기 때문임
         return Jwts.builder()
-                .setSubject(String.valueOf(userId))
+                .subject(String.valueOf(userId))
                 // 주제(subject) 지정. sub 클레임에 사용자 식별자를 저장한다. 핵심 식별자는 보통 sub에 넣는게 표준임
                 // getSubject()로 쉽게 꺼내기 좋음
-                .setId(UUID.randomUUID().toString())
+                .id(UUID.randomUUID().toString())
                 // jti 클레임(jwt id)에 전역 고유값을 저장함 (UUID : 범용 고유 식별자)
-                .setIssuedAt(now)
+                .issuedAt(now)
                 // 발급 시각(issued at) 지정. 현재임
-                .setExpiration(new Date(now.getTime() + expireTime))
+                .expiration(new Date(now.getTime() + expireTime))
                 // 만료 시각(expiration) 지정. 현재 시간에 만료 시간 더해서 지정함
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key)
                 // 준비된 대칭키와 서명 알고리즘(HS256)으로 서명
                 .compact();
         // header/claims를 base64url 인코딩하며, signature를 붙여 최종 문자열로 직렬화 하는 함수
@@ -106,13 +108,13 @@ public class JwtProvider {
     public Claims parseClaims(String token){
         return Jwts.parser() // parser() : JWT를 파싱할 준비 객체(JwtParserBuilder)를 반환하는 함수
                 // JwtParserBuilder : 빌더 패턴을 사용해서 parser의 옵션들(서명키, Clock, 압축 설정 등)을 지정할 수 있는 객체
-                .setSigningKey(key) // setSigningKey(): 토큰 서명을 검증하기 위한 비밀 키를 설정하는 함수.(서명 검증 완료 시, JwtParserBuilder 반환)
+                .verifyWith(key) // verifyWith(): 검증에 쓸 시크릿 키를 parser에 등록하는 함수
                 .build() // 위에서 지금까지 설정한 옵션들을 기반으로 실제 JwtParser 객체를 생성한다.
                 // JwtParser : JWT 문자열을 실제로 parsing하고, 클레임 검증 등을 수행할 수 있는 객체
-                .parseClaimsJws(token) // parseClaimsJws(): 전달된 문자열인 accessToken을 JWS(Signed JWT)로 해석하는 함수
+                .parseSignedClaims(token) // parseSignedClaims(): 서명된 jwt 문자열을 검증, 파싱해서 Jws<Claims> 반환
                 // 내부적으로 Signature를 검증하고, Payload를 Claims로 변환해준다.(반환값 Jws<Claims>)
                 // JWS : Header.Payload.Signature 형태의 서명된 JWT를 뜻함
-                .getBody(); // Jws<Claims> 객체에서 Payload만 꺼내오는 함수 (Claims return)
+                .getPayload(); // Jws<Claims> 객체에서 Payload만 꺼내오는 함수 (Claims return)
     }
 
 
