@@ -47,6 +47,7 @@ public final class PostingMapper {
 
         return new PostingDetailResponse(
                 p.getId(),
+                p.getUserId(),
                 p.getTitle(),
                 p.getPeriodStart(),
                 daysKo,

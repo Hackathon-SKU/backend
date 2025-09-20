@@ -6,6 +6,7 @@ import java.util.List;
 
 public record PostingDetailResponse(
         Long id,
+        Long serviceUserId,
         String title,
         String periodStart,           // "6개월 이상" 같은 문자열
         List<String> preferredDays,   // ["월","수","금"]

@@ -2,6 +2,7 @@ package com.hackathon.backend.domain.Posting.Entity;
 
 import com.hackathon.backend.domain.Posting.Model.DayCode;
 import com.hackathon.backend.domain.Posting.Model.TimeBand;
+import com.hackathon.backend.domain.Profiles.Entity.DisabledProfile;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -60,6 +61,10 @@ public class Posting {
 
     @CreationTimestamp private LocalDateTime createdAt;
     @UpdateTimestamp   private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
+    private DisabledProfile disabledProfile;
 
     // 편의 수정 메서드 등은 필요시 추가
 }
