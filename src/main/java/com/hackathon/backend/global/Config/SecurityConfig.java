@@ -46,7 +46,8 @@ public class SecurityConfig {
             "/index.html",
             "/favicon.ico",
             "/assets/**", "/css/**", "/js/**", "/images/**",
-            "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html"
+            "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html",
+            "/ws/**"
     };
 
     // 각 Request마다 해당 filterChain에 등록된 필터들이 순서대로 실행된다.
