@@ -17,11 +17,13 @@ public class PostingQueryController {
 
     // 목록 (페이지네이션)
     @GetMapping
-    public Page<PostingListItemDto> list(
+    public java.util.List<PostingListItemDto> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return service.getPostingList(PageRequest.of(page, size));
+        // Page → content만 꺼내서 반환
+        return service.getPostingList(org.springframework.data.domain.PageRequest.of(page, size))
+                .getContent();
     }
 
     // 상세
