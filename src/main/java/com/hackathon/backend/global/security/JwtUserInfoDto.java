@@ -18,5 +18,4 @@ public class JwtUserInfoDto {
     private String password;
     private String name;
     private RoleType role;
-    private String profileImageUrl;
 }

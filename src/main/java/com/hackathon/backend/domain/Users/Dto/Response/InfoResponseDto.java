@@ -24,4 +24,6 @@ public class InfoResponseDto {
     private final String email;
 
     private final String profileImageUrl;
+
+    private final Integer point;
 }
