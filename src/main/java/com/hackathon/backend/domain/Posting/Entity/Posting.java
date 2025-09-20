@@ -1,5 +1,7 @@
 package com.hackathon.backend.domain.Posting.Entity;
 
+import com.hackathon.backend.domain.Posting.Model.DayCode;
+import com.hackathon.backend.domain.Posting.Model.TimeBand;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,76 +13,54 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+// 다른 import들...
+import org.springframework.security.core.annotation.AuthenticationPrincipal;  // ★ 이거 추가
+
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Entity
-@Table(
-        name = "postings",
-        indexes = {
-                @Index(name = "idx_postings_user_id", columnList = "user_id"),
-                @Index(name = "idx_postings_period", columnList = "period_start,period_end")
-        }
-)
-@EntityListeners(AuditingEntityListener.class)
+@Table(name = "postings")
 public class Posting {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "title", length = 120) // 필요시 120으로 늘리는 걸 권장
+    @Column(nullable=false, length=120)
     private String title;
 
-    @Column(name = "period_start")
-    private LocalDate periodStart;
-
-    @Column(name = "period_end")
-    private LocalDate periodEnd;
+    // 기간을 날짜로 쓸 거면 LocalDate, "6개월 이상"처럼 텍스트면 String으로
+    @Column(name="period_start_text", length=50)
+    private String periodStart;   // 예: "6개월 이상"
 
     @Lob
-    @Column(name = "description")
     private String description;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "posting", cascade = CascadeType.ALL, orphanRemoval = true)
+    /** 희망 요일: 1=월 … 7=일 */
+    @ElementCollection
+    @CollectionTable(name="posting_preferred_days", joinColumns=@JoinColumn(name="posting_id"))
+    @Column(name="day_code", nullable=false) // INT
     @Builder.Default
-    private List<PostingWeeklySlots> weeklySlots = new ArrayList<>();
+    private Set<Integer> preferredDays = new LinkedHashSet<>();
 
-    /** 편의 메서드 */
-    public void addSlot(PostingWeeklySlots slot) {
-        slot.setPosting(this);   // ← 자식 FK 세팅 (자식 엔티티에 @Setter 필요)
-        weeklySlots.add(slot);
-    }
+    /** 희망 시간대: 1=오전, 2=오후, 3=심야 */
+    @ElementCollection
+    @CollectionTable(name="posting_time_bands", joinColumns=@JoinColumn(name="posting_id"))
+    @Column(name="time_band_code", nullable=false) // INT
+    @Builder.Default
+    private Set<Integer> timeBands = new LinkedHashSet<>();
 
-    public void removeSlot(PostingWeeklySlots slot) {
-        weeklySlots.remove(slot);
-        slot.setPosting(null);
-    }
+    @CreationTimestamp private LocalDateTime createdAt;
+    @UpdateTimestamp   private LocalDateTime updatedAt;
 
-    /** 기간 유효성 검사 */
-    public boolean isValidPeriod() {
-        return periodStart == null || periodEnd == null || !periodStart.isAfter(periodEnd);
-    }
-
-    /** 수정 */
-    public void edit(String title, String description, LocalDate start, LocalDate end) {
-        if (title != null) this.title = title;
-        if (description != null) this.description = description;
-        if (start != null) this.periodStart = start;
-        if (end != null) this.periodEnd = end;
-    }
+    // 편의 수정 메서드 등은 필요시 추가
 }
+

@@ -1,70 +1,59 @@
 package com.hackathon.backend.domain.Posting.Dto;
 
 import com.hackathon.backend.domain.Posting.Entity.Posting;
-import com.hackathon.backend.domain.Posting.Entity.PostingWeeklySlots;
+import com.hackathon.backend.domain.Posting.support.SimpleDayTimeMapper;
 
-import java.util.ArrayList;
+import java.time.ZoneOffset;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class PostingMapper {
     private PostingMapper() {}
 
-    /** 요청 DTO → 엔티티(슬롯 포함) */
+    // Create 요청 → 엔티티 (userId 받도록 수정)
     public static Posting toEntity(Long userId, CreatePostingRequest req) {
-        Posting posting = Posting.builder()
-                .userId(userId)
+        Set<Integer> dayCodes = req.preferredDays().stream()
+                .map(SimpleDayTimeMapper::dayKoToCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        Set<Integer> bandCodes = req.timeBands().stream()
+                .map(SimpleDayTimeMapper::bandKoToCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        return Posting.builder()
+                .userId(userId)                 // ← 이제 컴파일됨
                 .title(req.title())
-                .periodStart(req.periodStart())
-                .periodEnd(req.periodEnd())
+                .periodStart(req.periodStart()) // 문자열이면 String, 날짜면 LocalDate로 맞추세요
                 .description(req.description())
+                .preferredDays(dayCodes)
+                .timeBands(bandCodes)
                 .build();
-
-        // weeklyRules를 요일별 단일 슬롯으로 확장하여 추가
-        req.weeklyRules().forEach(rule ->
-                rule.days().forEach(d ->
-                        posting.addSlot(PostingWeeklySlots.builder()
-                                .dayOfWeek(d)
-                                .startTime(rule.startTime())
-                                .endTime(rule.endTime())
-                                .build())
-                )
-        );
-        return posting;
     }
 
-    /** (보조) 규칙 → 슬롯 리스트로만 뽑고 싶을 때 */
-    public static List<PostingWeeklySlots> expandRulesToSlots(CreatePostingRequest req) {
-        List<PostingWeeklySlots> slots = new ArrayList<>();
-        req.weeklyRules().forEach(rule ->
-                rule.days().forEach(d ->
-                        slots.add(PostingWeeklySlots.builder()
-                                .dayOfWeek(d)
-                                .startTime(rule.startTime())
-                                .endTime(rule.endTime())
-                                .build())
-                )
-        );
-        return slots;
-    }
-
-    /** 엔티티 → 응답 DTO */
-    public static PostingResponse toResponse(Posting p) {
-        var slotViews = p.getWeeklySlots().stream()
-                .map(s -> new PostingResponse.WeeklySlotView(
-                        s.getDayOfWeek(), s.getStartTime(), s.getEndTime()
-                ))
+    // 엔티티 → 응답
+    public static PostingDetailResponse toResponse(Posting p) {
+        List<String> daysKo = p.getPreferredDays().stream()
+                .map(SimpleDayTimeMapper::dayCodeToKo)
                 .toList();
 
-        return new PostingResponse(
+        List<String> bandsKo = p.getTimeBands().stream()
+                .map(SimpleDayTimeMapper::bandCodeToKo)
+                .toList();
+
+        var createdZ = p.getCreatedAt() == null ? null : p.getCreatedAt().atOffset(ZoneOffset.UTC).toString();
+        var updatedZ = p.getUpdatedAt() == null ? null : p.getUpdatedAt().atOffset(ZoneOffset.UTC).toString();
+
+        return new PostingDetailResponse(
                 p.getId(),
-                p.getUserId(),
                 p.getTitle(),
-                p.getDescription(),
                 p.getPeriodStart(),
-                p.getPeriodEnd(),
-                slotViews,
-                p.getCreatedAt(),
-                p.getUpdatedAt()
+                daysKo,
+                bandsKo,
+                p.getDescription(),
+                createdZ,
+                updatedZ
         );
     }
 }
