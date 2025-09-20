@@ -1,5 +1,6 @@
 package com.hackathon.backend.domain.Auth.Dto.Request;
 
+import com.hackathon.backend.domain.Profiles.Entity.DisabledProfile;
 import com.hackathon.backend.domain.Users.Entity.Gender;
 import com.hackathon.backend.domain.Users.Entity.RoleType;
 import jakarta.validation.constraints.Email;
@@ -9,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @NoArgsConstructor
@@ -30,8 +33,14 @@ public class JoinRequestDto {
     @NotNull(message = "생년월일은 필수 입력 값입니다.")
     private LocalDate birthDate;
 
-    @NotNull(message = "ROLE은 CAREGIVER 또는 SERVICE_USER 이어야 합니다.")
+    @NotNull(message = "ROLE은 CAREGIVER 또는 DISABLED 이어야 합니다.")
     private RoleType role;
 
     private String profileImgUrl;
+
+    // 🔹 DISABLED 전용 입력값
+    private String region;
+    private String registrationNumber; // 예: 16자리면 \d{16} 검증 추천
+    private Map<String, Object> classification;
+
 }

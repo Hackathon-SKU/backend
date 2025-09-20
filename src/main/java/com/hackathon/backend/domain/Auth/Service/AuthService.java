@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -64,7 +65,7 @@ public class AuthService {
 
 
         // 3) ROLE에 따라 프로필 생성 (Shared PK)
-        createProfileByRole(savedUsers);
+        createProfileByRole(savedUsers, joinRequestDto);
 
 
         // 4. 자동 로그인 처리
@@ -87,40 +88,38 @@ public class AuthService {
     }
 
 
-    private void createProfileByRole(Users savedUsers) {
-        RoleType role = savedUsers.getRole();
+    private void createProfileByRole(Users savedUsers, JoinRequestDto req) {
+        var role = savedUsers.getRole();
         if (role == null) return;
 
         switch (role) {
-            case DISABLED -> { // 장애인인 경우
-                // 이미 존재하면 스킵 (중복 방지) 🛡️
+            case RoleType.DISABLED -> {
                 if (disabledProfileRepository.existsById(savedUsers.getId())) return;
 
                 DisabledProfile profile = DisabledProfile.builder()
-                        .user(savedUsers) // @MapsId로 FK=PK 세팅
-                        // 필요 시 기본값 지정 가능 👇
-                        // .region(null).registrationNumber(null).classification(null)
+                        .user(savedUsers)
+                        .region(req.getRegion())
+                        .registrationNumber(req.getRegistrationNumber())
+                        .classification((Map<String,Object>) req.getClassification()) // 필요 시 캐스팅
                         .build();
-                // 양방향 연결 편의 메서드
                 profile.linkUser(savedUsers);
                 disabledProfileRepository.save(profile);
             }
-            case CAREGIVER -> {
+            case RoleType.CAREGIVER -> {
                 if (caregiverProfileRepository.existsById(savedUsers.getId())) return;
 
                 CaregiverProfile profile = CaregiverProfile.builder()
                         .user(savedUsers)
-                        // .careerYears(null).serviceCategories(null).regions(null).intro(null)
                         .build();
+
                 profile.linkUser(savedUsers);
                 caregiverProfileRepository.save(profile);
             }
-            default -> {
-                // 알 수 없는 역할 → 아무 것도 안 함 (또는 예외로 바꿔도 됨)
-            }
+            default -> {}
         }
     }
-    
+
+
 
     // 로그인 진행 함수 - login 시, 새로운 access token을 발급해주는 함수
     /*

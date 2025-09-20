@@ -46,7 +46,8 @@ public class SecurityConfig {
             "/index.html",
             "/favicon.ico",
             "/assets/**", "/css/**", "/js/**", "/images/**",
-            "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html"
+            "/auth/login", "/auth/join", "/swagger-ui/**", "/api-docs", "swagger-ui-custom.html",
+            "/ws/**"
     };
 
     // 각 Request마다 해당 filterChain에 등록된 필터들이 순서대로 실행된다.
@@ -98,6 +99,8 @@ public class SecurityConfig {
             authorize
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(AUTH_WHITELIST).permitAll()
+                    .requestMatchers("/profiles/caregiver/**").hasRole("CAREGIVER")
+                    .requestMatchers("/profiles/disabled/**").hasRole("DISABLED")
                     .anyRequest().permitAll();
         });
         // authorizeHttpRequests() : Spring Security에서 URL 요청 별 인가(Authorization, 권한 부여)규칙을 설정하는 DSL 함수
