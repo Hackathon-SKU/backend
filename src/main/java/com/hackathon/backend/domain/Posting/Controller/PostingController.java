@@ -30,20 +30,22 @@ public class PostingController {
     /** 공고 생성 (프론트는 한국어로 전달: preferredDays=["월","수",...], timeBands=["오전","심야"]) */
     @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<GlobalWebResponse<?>> create(
-            @AuthenticationPrincipal CustomUserDetails principal,   // ★ 추가
+            @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody CreatePostingRequest req
     ) {
         if (principal == null || principal.getUser() == null) {
-            // 인증 필수라면 401/403으로 처리(전역 핸들러로 보내도 됨)
             throw new IllegalStateException("인증 정보가 없습니다.");
         }
-        Long userId = principal.getUser().getUserId();             // ★ 여기서 id 가져옴
+        Long userId = principal.getUser().getUserId();
 
-        Long id = postingService.create(userId, req);              // ★ 서비스에 전달
+        Long id = postingService.create(userId, req);
+
+        // ✅ 생성 직후 상세 DTO 조회 (컬렉션까지 로딩된 메서드 사용)
+        PostingDetailResponse detail = postingService.get(id);
 
         return ResponseEntity
                 .created(URI.create("/api/postings/" + id))
-                .body(GlobalWebResponse.success("OK", "성공", Map.of("id", id)));
+                .body(GlobalWebResponse.success("OK", "성공", detail));
     }
 
 
