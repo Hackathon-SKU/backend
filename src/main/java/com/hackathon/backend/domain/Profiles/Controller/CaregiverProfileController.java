@@ -19,28 +19,32 @@ import static com.hackathon.backend.global.Response.GlobalWebResponse.success;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/profiles/caregiver")
-@PreAuthorize("hasRole('CAREGIVER')")
 @Tag(name = "Profiles-Caregiver", description = "복지사 프로필 API")
 public class CaregiverProfileController {
 
     private final ProfileService profileService;
 
-    @Operation(summary = "Caregiver 프로필 조회(본인, flat 응답)")
-    @GetMapping("/info")
-    public ResponseEntity<GlobalWebResponse<CaregiverInfoResponse>> info(
-            @AuthenticationPrincipal CustomUserDetails principal
+    /** ✅ 복지사 프로필 조회(by userId) */
+    @Operation(summary = "Caregiver 프로필 조회(by userId, flat 응답)")
+    @PreAuthorize("permitAll()") // 공개 여부 정책에 맞게 조정
+    @GetMapping("/info/{userId}")
+    public ResponseEntity<GlobalWebResponse<CaregiverInfoResponse>> getByUserId(
+            @PathVariable Long userId
     ) {
-        var body = profileService.getMyCaregiverProfile(principal);
-        return ResponseEntity.ok(success("200", "성공 메시지", body));
+        var body = profileService.getCaregiverProfileByUserId(userId);
+        return ResponseEntity.ok(GlobalWebResponse.success("200", "성공 메시지", body));
     }
 
+    /** 내 프로필 수정(본인) */
     @Operation(summary = "Caregiver 프로필 수정(PATCH, flat 응답)")
+    @PreAuthorize("hasRole('CAREGIVER')")
     @PatchMapping("/info")
     public ResponseEntity<GlobalWebResponse<CaregiverInfoResponse>> patch(
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestBody CaregiverProfileUpdateRequest req
     ) {
         var body = profileService.patchMyCaregiverProfile(principal, req);
-        return ResponseEntity.ok(success("200", "성공 메시지", body));
+        return ResponseEntity.ok(GlobalWebResponse.success("200", "성공 메시지", body));
     }
 }
+

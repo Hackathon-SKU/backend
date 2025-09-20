@@ -74,22 +74,23 @@ public class ProfileService {
         return builder.build();
     }
 
+    /* =========== [NEW] userId로 복지사 프로필 조회 ========= */
     @Transactional
-    public CaregiverInfoResponse getMyCaregiverProfile(CustomUserDetails principal) {
-        Users user = loadCurrentUser(principal);
+    public CaregiverInfoResponse getCaregiverProfileByUserId(Long targetUserId) {
+        Users user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + targetUserId));
         if (user.getRole() != RoleType.CAREGIVER)
             throw new CustomException(ProfileErroCode.INVALID_ROLE);
 
         CaregiverProfile p = caregiverRepo.findById(user.getId()).orElse(null);
 
-        // ✅ 기본값(빈 구조) 제공해서 null 숨김 방지
         Short careerYears = (p != null && p.getCareerYears() != null) ? p.getCareerYears() : 0;
         Map<String, Object> serviceCategories = (p != null && p.getServiceCategories() != null)
                 ? p.getServiceCategories()
-                : Map.of("categories", List.of()); // [] 기본
+                : Map.of("categories", List.of());
         Map<String, Object> regions = (p != null && p.getRegions() != null)
                 ? p.getRegions()
-                : Map.of("address", List.of());    // [] 기본
+                : Map.of("address", List.of());
         String intro = (p != null && p.getIntro() != null) ? p.getIntro() : "";
 
         return CaregiverInfoResponse.builder()
@@ -150,10 +151,10 @@ public class ProfileService {
     }
 
 
-    /** 👩‍🦽 Disabled 프로필 조회(본인) → flat 응답 */
     @Transactional
-    public DisabledInfoResponse getMyDisabledProfile(CustomUserDetails principal) {
-        Users user = loadCurrentUser(principal);
+    public DisabledInfoResponse getDisabledProfileByUserId(Long targetUserId) {
+        Users user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + targetUserId));
         if (user.getRole() != RoleType.DISABLED)
             throw new CustomException(ProfileErroCode.INVALID_ROLE);
 
@@ -161,7 +162,9 @@ public class ProfileService {
 
         String region = (p != null && p.getRegion() != null) ? p.getRegion() : "";
         String registrationNumber = (p != null && p.getRegistrationNumber() != null) ? p.getRegistrationNumber() : "";
-        Map<String, Object> classification = (p != null && p.getClassification() != null) ? p.getClassification() : Map.of();
+        Map<String, Object> classification = (p != null && p.getClassification() != null)
+                ? p.getClassification()
+                : Map.of(); // 빈 JSON 기본
 
         return DisabledInfoResponse.builder()
                 .userId(user.getId())
