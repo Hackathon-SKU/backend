@@ -10,6 +10,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -43,12 +44,12 @@ public class CaregiverProfile {
     /** MySQL JSON 배열 */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "service_categories", columnDefinition = "json")
-    private List<String> serviceCategories;
+    private Map<String, Object> serviceCategories;
 
     /** 활동 지역 배열(JSON) */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "regions", columnDefinition = "json")
-    private List<String> regions;
+    private Map<String, Object> regions;
 
     @Lob
     @Column(name = "intro")
@@ -61,6 +62,7 @@ public class CaregiverProfile {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
 
     // 편의 메서드 🔧
     public void linkUser(Users user) {

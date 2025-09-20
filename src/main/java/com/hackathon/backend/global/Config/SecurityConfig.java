@@ -99,6 +99,8 @@ public class SecurityConfig {
             authorize
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(AUTH_WHITELIST).permitAll()
+                    .requestMatchers("/profiles/caregiver/**").hasRole("CAREGIVER")
+                    .requestMatchers("/profiles/disabled/**").hasRole("DISABLED")
                     .anyRequest().permitAll();
         });
         // authorizeHttpRequests() : Spring Security에서 URL 요청 별 인가(Authorization, 권한 부여)규칙을 설정하는 DSL 함수
