@@ -4,6 +4,7 @@ import com.hackathon.backend.global.Exception.UserAccessDeniedHandler;
 import com.hackathon.backend.global.Exception.UserAuthenticationEntryPoint;
 import com.hackathon.backend.global.security.JwtAuthFilter;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -99,8 +100,15 @@ public class SecurityConfig {
             authorize
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(AUTH_WHITELIST).permitAll()
-                    .requestMatchers("/profiles/caregiver/**").hasRole("CAREGIVER")
-                    .requestMatchers("/profiles/disabled/**").hasRole("DISABLED")
+                    // ✅ 공개/열람 허용 (또는 isAuthenticated/hasAnyRole로 조정)
+                    .requestMatchers(HttpMethod.GET, "/profiles/caregiver/info/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/profiles/disabled/info/**").permitAll()
+
+                    // 수정은 계속 보호
+                    .requestMatchers(HttpMethod.PATCH, "/profiles/caregiver/info").hasRole("CAREGIVER")
+                    .requestMatchers(HttpMethod.PATCH, "/profiles/disabled/info").hasRole("DISABLED")
+
+                    // 그 외 기본 정책
                     .anyRequest().permitAll();
         });
         // authorizeHttpRequests() : Spring Security에서 URL 요청 별 인가(Authorization, 권한 부여)규칙을 설정하는 DSL 함수
